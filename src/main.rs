@@ -9,9 +9,10 @@ struct NorgFmt {
     file: PathBuf,
 }
 
-fn rest(children: Vec<NorgNode>, from: Option<usize>) -> String {
+fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
     children
-        .into_iter()
+        .iter()
+        .take(to.unwrap_or(children.len()))
         .skip(from.unwrap_or(0))
         .fold(String::default(), |str, val| str + &val.content)
 }
@@ -29,7 +30,7 @@ pub fn parse_heading(_node: &Node, children: Vec<NorgNode>, _: &String) -> Resul
             .content,
     );
 
-    Ok(heading_header + &rest(children, Some(2)))
+    Ok(heading_header + &rest(&children, Some(2), None))
 }
 
 pub fn parse_stars(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
@@ -38,6 +39,29 @@ pub fn parse_stars(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
 
 pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
     Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
+}
+
+pub fn parse_markup(node: &Node, children: Vec<NorgNode>, source: &String) -> Result<String> {
+    let should_make_free_form = children.iter().any(|val| val.kind == "escape_sequence");
+
+    // TODO(vhyrro): Make this work the other way, were `*||*` decays to just `**`. Also make sure
+    // this works for more than just bold and italic.
+
+    let char = children
+        .get(0)
+        .ok_or(eyre!("markup has no opening modifier"))?
+        .content
+        .clone();
+
+    if should_make_free_form {
+        Ok(char.to_owned()
+            + "|"
+            + &rest(&children, Some(1), Some(children.len() - 1)).replace("\\", "")
+            + "|"
+            + &char)
+    } else {
+        Ok(char.to_owned() + &rest(&children, Some(1), None))
+    }
 }
 
 pub struct NorgNode {
@@ -63,8 +87,9 @@ pub fn parse(node: &Node, source: &String) -> Result<String> {
         "heading" => parse_heading(node, children, source)?,
         "heading_stars" => parse_stars(node, children, source)?,
         "title" => parse_title(node, children, source)?,
-        "document" => rest(children, None),
-        _ => node.utf8_text(source.as_bytes())?.to_string(),
+        "bold" | "italic" => parse_markup(node, children, source)?,
+        _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
+        _ => rest(&children, None, None),
     };
 
     Ok(ret)
