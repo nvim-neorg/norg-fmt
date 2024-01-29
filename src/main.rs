@@ -44,12 +44,17 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
     Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
 }
 
-pub fn parse_markup(node: &Node, children: Vec<NorgNode>, source: &String) -> Result<String> {
+// Possible transformations:
+// - Regular decay: `*|hello|*` -> `*hello*`
+// - Decay with escape sequences: `*hello\* world*` -> `*|hello* world|*`
+// - Keep regular escape sequences in check: `*\hello*` -> `*\hello*`
+// - Mixed: `*\hello\* world*` -> `*|hello* world|*`
+pub fn parse_markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
     let should_make_free_form = children.iter().any(|val| val.kind == "escape_sequence");
-    let is_free_form = node
-        .named_child(1)
+    let is_free_form = children
+        .get(1)
         .ok_or(eyre!("malformed attached modifier input"))?
-        .kind()
+        .kind
         == "free_form_open";
 
     // TODO(vhyrro): Make this work the other way, were `*||*` decays to just `**`.
@@ -60,10 +65,11 @@ pub fn parse_markup(node: &Node, children: Vec<NorgNode>, source: &String) -> Re
         .content
         .clone();
 
+    // NOTE: The substitution will incorrectly delete escaped escape sequences like `\\`
     if should_make_free_form && !is_free_form {
         Ok(char.to_owned()
             + "|"
-            + &rest(&children, Some(1), Some(children.len() - 1)).replace("\\", "")
+            + &rest(&children, Some(1), Some(children.len() - 1)).replace('\\', "")
             + "|"
             + &char)
     } else if !should_make_free_form && is_free_form {
@@ -100,11 +106,26 @@ pub fn parse(node: &Node, source: &String) -> Result<String> {
         | "subscript" | "verbatim" | "inline_comment" | "math" | "inline_macro" => {
             parse_markup(node, children, source)?
         }
+        "escape_sequence" => parse_escape_sequence(node, children, source)?,
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
     };
 
     Ok(ret)
+}
+
+fn parse_escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Result<String> {
+    let escaped_char = node
+        .utf8_text(source.as_bytes())?
+        .chars()
+        .nth_back(0)
+        .unwrap();
+
+    if escaped_char.is_ascii_punctuation() {
+        Ok(node.utf8_text(source.as_bytes())?.to_string())
+    } else {
+        Ok(escaped_char.to_string())
+    }
 }
 
 fn main() -> Result<()> {
