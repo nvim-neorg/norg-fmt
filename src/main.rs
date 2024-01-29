@@ -98,6 +98,7 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         }
         "escape_sequence" => inline::escape_sequence(node, children, source)?,
         "link_scope_heading" => inline::link_scope(node, children, source)?,
+        "uri" => inline::uri(node, children, source)?,
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
     })

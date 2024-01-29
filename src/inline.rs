@@ -72,6 +72,14 @@ pub fn link_scope(_node: &Node, children: Vec<NorgNode>, _source: &String) -> Re
     Ok(output.trim().to_string())
 }
 
+pub fn uri(node: &Node, _children: Vec<NorgNode>, source: &str) -> Result<String> {
+    Ok(node
+        .utf8_text(source.as_bytes())?
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect())
+}
+
 pub fn escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Result<String> {
     let escaped_char = node
         .utf8_text(source.as_bytes())?
