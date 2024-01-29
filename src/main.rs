@@ -77,7 +77,6 @@ pub struct NorgNode {
 }
 
 pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
-    // println!("'{}'", node.kind());
     let mut children = vec![];
 
     for child in node.children(&mut node.walk()) {
@@ -89,7 +88,7 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         })
     }
 
-    let ret = match node.kind() {
+    Ok(match node.kind() {
         "heading" => parse_heading(node, children, source, config)?,
         "heading_stars" => parse_stars(node, children, source)?,
         "title" => parse_title(node, children, source)?,
@@ -98,11 +97,10 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
             inline::markup(node, children, source)?
         }
         "escape_sequence" => inline::escape_sequence(node, children, source)?,
+        "link_scope_heading" => inline::link_scope(node, children, source)?,
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
-    };
-
-    Ok(ret)
+    })
 }
 
 #[derive(Default)]

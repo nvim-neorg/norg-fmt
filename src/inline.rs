@@ -50,6 +50,22 @@ pub fn markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
     }
 }
 
+pub fn link_scope(_node: &Node, children: Vec<NorgNode>, _source: &String) -> Result<String> {
+    let output = format!(
+        "{} {}",
+        children
+            .get(0)
+            .ok_or(eyre!("no scope provided for link"))?
+            .content,
+        children
+            .get(1)
+            .ok_or(eyre!("no title provided for link"))?
+            .content
+    );
+
+    Ok(output.trim().to_string())
+}
+
 pub fn escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Result<String> {
     let escaped_char = node
         .utf8_text(source.as_bytes())?
