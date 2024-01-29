@@ -4,6 +4,8 @@ use regex::{Captures, Regex};
 use std::path::PathBuf;
 use tree_sitter::{Node, Parser};
 
+mod inline;
+
 #[derive(ClapParser)]
 struct NorgFmt {
     /// The path of the file to format.
@@ -13,7 +15,7 @@ struct NorgFmt {
     verify: bool,
 }
 
-fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
+pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
     children
         .iter()
         .take(to.unwrap_or(children.len()))
@@ -45,53 +47,6 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
     Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
 }
 
-// Possible transformations:
-// - Regular decay: `*|hello|*` -> `*hello*`
-// - Conversion with escape sequences: `*hello\* world*` -> `*|hello* world|*`
-// - Keep regular escape sequences in check: `*\hello*` -> `*\hello*`
-// - Mixed: `*\hello\* world*` -> `*|hello* world|*`
-pub fn parse_markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
-    let should_make_free_form = children.iter().any(|val| {
-        val.kind == "escape_sequence"
-            && val
-                .content
-                .chars()
-                .nth_back(0)
-                .unwrap()
-                .is_ascii_punctuation()
-    });
-
-    let is_free_form = children
-        .get(1)
-        .ok_or(eyre!("malformed attached modifier input"))?
-        .kind
-        == "free_form_open";
-
-    let char = children
-        .get(0)
-        .ok_or(eyre!("markup has no opening modifier"))?
-        .content
-        .clone();
-
-    // TODO: Don't recompile this regex every time, please
-    let regex = Regex::new(r"\\([[:punct:]])")?;
-
-    if should_make_free_form && !is_free_form {
-        Ok(char.to_owned()
-            + "|"
-            + &regex.replace_all(
-                &rest(&children, Some(1), Some(children.len() - 1)),
-                |cap: &Captures| cap[1].to_string(),
-            )
-            + "|"
-            + &char)
-    } else if !should_make_free_form && is_free_form {
-        Ok(char.to_owned() + &rest(&children, Some(2), Some(children.len() - 2)) + &char)
-    } else {
-        Ok(char.to_owned() + &rest(&children, Some(1), None))
-    }
-}
-
 pub struct NorgNode {
     // field: Option<String>,
     pub kind: String,
@@ -117,28 +72,14 @@ pub fn parse(node: &Node, source: &String) -> Result<String> {
         "title" => parse_title(node, children, source)?,
         "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "superscript"
         | "subscript" | "verbatim" | "inline_comment" | "math" | "inline_macro" => {
-            parse_markup(node, children, source)?
+            inline::markup(node, children, source)?
         }
-        "escape_sequence" => parse_escape_sequence(node, children, source)?,
+        "escape_sequence" => inline::escape_sequence(node, children, source)?,
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
     };
 
     Ok(ret)
-}
-
-fn parse_escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Result<String> {
-    let escaped_char = node
-        .utf8_text(source.as_bytes())?
-        .chars()
-        .nth_back(0)
-        .unwrap();
-
-    if escaped_char.is_ascii_punctuation() {
-        Ok(node.utf8_text(source.as_bytes())?.to_string())
-    } else {
-        Ok(escaped_char.to_string())
-    }
 }
 
 fn main() -> Result<()> {
