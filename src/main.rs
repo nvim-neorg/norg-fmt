@@ -1,6 +1,6 @@
 use clap::Parser as ClapParser;
 use eyre::{eyre, Result};
-use regex::{Captures, Regex};
+use regex::Regex;
 use std::path::PathBuf;
 use tree_sitter::{Node, Parser};
 
@@ -24,19 +24,28 @@ pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) ->
 }
 
 pub fn parse_heading(_node: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
+    let stars = &children
+        .get(0)
+        .ok_or(eyre!("heading has no stars"))?
+        .content;
+
     let heading_header = format!(
         "{} {}",
-        children
-            .get(0)
-            .ok_or(eyre!("heading has no stars"))?
-            .content,
+        stars,
         children
             .get(1)
             .ok_or(eyre!("heading has no title"))?
             .content,
     );
 
-    Ok(heading_header + &rest(&children, Some(2), None))
+    let r = Regex::new(r"[\r\n]+")?;
+
+    Ok(heading_header
+        + &r.split(&rest(&children, Some(2), None))
+            .map(String::from)
+            .map(|str| " ".repeat(stars.len() + 1) + str.trim_start())
+            .collect::<Vec<String>>()
+            .join("\n"))
 }
 
 pub fn parse_stars(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
