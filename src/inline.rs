@@ -72,6 +72,15 @@ pub fn link_scope(_node: &Node, children: Vec<NorgNode>, _source: &String) -> Re
     Ok(output.trim().to_string())
 }
 
+pub fn anchor(node: &Node, _children: Vec<NorgNode>, source: &String) -> Result<String> {
+    // NOTE(vhyrro): Please there has to be a better way of doing this.
+    let regex = Regex::new(r"\s+")?;
+
+    Ok(regex
+        .replace_all(&node.utf8_text(source.as_bytes())?.trim(), " ")
+        .to_string())
+}
+
 pub fn uri(node: &Node, _children: Vec<NorgNode>, source: &str) -> Result<String> {
     Ok(node
         .utf8_text(source.as_bytes())?
