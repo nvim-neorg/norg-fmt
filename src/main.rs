@@ -16,6 +16,9 @@ struct NorgFmt {
 
     #[arg(long)]
     newline_after_headings: bool,
+
+    #[arg(long)]
+    no_indent_headings: bool,
 }
 
 pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
@@ -29,12 +32,13 @@ pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) ->
 pub fn parse_heading(
     _node: &Node,
     children: Vec<NorgNode>,
-    _: &String,
+    _source: &String,
     config: &Config,
 ) -> Result<String> {
-    let stars = &children
+    let stars = children
         .get(0)
         .ok_or(eyre!("heading has no stars"))?
+        .clone()
         .content;
 
     let heading_header = format!(
@@ -54,12 +58,33 @@ pub fn parse_heading(
     // TODO: Handle hard line breaks (`\\n`)
     let r = Regex::new(r"[\r\n]+")?;
 
-    Ok(heading_header
-        + &r.split(&rest(&children, Some(2), None))
-            .map(String::from)
-            .map(|str| " ".repeat(stars.len() + 1) + str.trim_start())
-            .collect::<Vec<String>>()
-            .join("\n"))
+    let children = children
+        .into_iter()
+        .map(|node| {
+            if config.no_indent_headings && node.kind == "heading" {
+                node
+            } else {
+                let matches = r.find_iter(&node.content).collect::<Vec<_>>();
+
+                NorgNode {
+                    kind: node.kind,
+                    content: r
+                        .split(&node.content)
+                        .enumerate()
+                        .filter(|(_, str)| !str.is_empty())
+                        .map(|(i, str)| (i, str.to_string()))
+                        .map(|(i, str)| {
+                            " ".repeat(stars.len() + 1)
+                                + &str
+                                + matches.get(i).map(|m| m.as_str()).unwrap_or_default()
+                        })
+                        .collect::<String>(),
+                }
+            }
+        })
+        .collect();
+
+    Ok(heading_header + &rest(&children, Some(2), None))
 }
 
 pub fn parse_stars(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
@@ -70,6 +95,7 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
     Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
 }
 
+#[derive(Debug, Clone)]
 pub struct NorgNode {
     // field: Option<String>,
     pub kind: String,
@@ -97,8 +123,11 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
             inline::markup(node, children, source)?
         }
         "escape_sequence" => inline::escape_sequence(node, children, source)?,
-        "link_scope_heading" => inline::link_scope(node, children, source)?,
         "uri" => inline::uri(node, children, source)?,
+        "description" => inline::anchor(node, children, source)?,
+        kind if kind.starts_with("link_scope_") || kind.starts_with("link_target_") => {
+            inline::link_scope(node, children, source)?
+        }
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
     })
@@ -107,6 +136,7 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
 #[derive(Default)]
 pub struct Config {
     newline_after_headings: bool,
+    no_indent_headings: bool,
 }
 
 fn main() -> Result<()> {
@@ -114,6 +144,7 @@ fn main() -> Result<()> {
 
     let config = Config {
         newline_after_headings: cli.newline_after_headings,
+        no_indent_headings: cli.no_indent_headings,
     };
 
     let file = cli.file;
