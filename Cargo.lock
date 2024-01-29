@@ -154,6 +154,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "eyre",
+ "regex",
  "serde",
  "tree-sitter",
  "tree-sitter-norg",

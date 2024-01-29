@@ -1,5 +1,6 @@
 use clap::Parser as ClapParser;
 use eyre::{eyre, Result};
+use regex::{Captures, Regex};
 use std::path::PathBuf;
 use tree_sitter::{Node, Parser};
 
@@ -46,18 +47,25 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
 
 // Possible transformations:
 // - Regular decay: `*|hello|*` -> `*hello*`
-// - Decay with escape sequences: `*hello\* world*` -> `*|hello* world|*`
+// - Conversion with escape sequences: `*hello\* world*` -> `*|hello* world|*`
 // - Keep regular escape sequences in check: `*\hello*` -> `*\hello*`
 // - Mixed: `*\hello\* world*` -> `*|hello* world|*`
 pub fn parse_markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
-    let should_make_free_form = children.iter().any(|val| val.kind == "escape_sequence");
+    let should_make_free_form = children.iter().any(|val| {
+        val.kind == "escape_sequence"
+            && val
+                .content
+                .chars()
+                .nth_back(0)
+                .unwrap()
+                .is_ascii_punctuation()
+    });
+
     let is_free_form = children
         .get(1)
         .ok_or(eyre!("malformed attached modifier input"))?
         .kind
         == "free_form_open";
-
-    // TODO(vhyrro): Make this work the other way, were `*||*` decays to just `**`.
 
     let char = children
         .get(0)
@@ -65,11 +73,16 @@ pub fn parse_markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<Str
         .content
         .clone();
 
-    // NOTE: The substitution will incorrectly delete escaped escape sequences like `\\`
+    // TODO: Don't recompile this regex every time, please
+    let regex = Regex::new(r"\\([[:punct:]])")?;
+
     if should_make_free_form && !is_free_form {
         Ok(char.to_owned()
             + "|"
-            + &rest(&children, Some(1), Some(children.len() - 1)).replace('\\', "")
+            + &regex.replace_all(
+                &rest(&children, Some(1), Some(children.len() - 1)),
+                |cap: &Captures| cap[1].to_string(),
+            )
             + "|"
             + &char)
     } else if !should_make_free_form && is_free_form {

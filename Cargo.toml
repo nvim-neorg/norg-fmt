@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.4.18", features = ["derive"] }
 eyre = "0.6.11"
+regex = "1.10.3"
 serde = { version = "1.0.196", features = ["derive"] }
 tree-sitter = "0.20.10"
 tree-sitter-norg = { git = "https://github.com/boltlessengineer/tree-sitter-norg3-pr1", branch = "beyond-paragraph" }
