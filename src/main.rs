@@ -7,6 +7,9 @@ use tree_sitter::{Node, Parser};
 struct NorgFmt {
     /// The path of the file to format.
     file: PathBuf,
+
+    #[arg(long)]
+    verify: bool,
 }
 
 fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
@@ -43,9 +46,13 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
 
 pub fn parse_markup(node: &Node, children: Vec<NorgNode>, source: &String) -> Result<String> {
     let should_make_free_form = children.iter().any(|val| val.kind == "escape_sequence");
+    let is_free_form = node
+        .named_child(1)
+        .ok_or(eyre!("malformed attached modifier input"))?
+        .kind()
+        == "free_form_open";
 
-    // TODO(vhyrro): Make this work the other way, were `*||*` decays to just `**`. Also make sure
-    // this works for more than just bold and italic.
+    // TODO(vhyrro): Make this work the other way, were `*||*` decays to just `**`.
 
     let char = children
         .get(0)
@@ -53,12 +60,14 @@ pub fn parse_markup(node: &Node, children: Vec<NorgNode>, source: &String) -> Re
         .content
         .clone();
 
-    if should_make_free_form {
+    if should_make_free_form && !is_free_form {
         Ok(char.to_owned()
             + "|"
             + &rest(&children, Some(1), Some(children.len() - 1)).replace("\\", "")
             + "|"
             + &char)
+    } else if !should_make_free_form && is_free_form {
+        Ok(char.to_owned() + &rest(&children, Some(2), Some(children.len() - 2)) + &char)
     } else {
         Ok(char.to_owned() + &rest(&children, Some(1), None))
     }
@@ -87,7 +96,10 @@ pub fn parse(node: &Node, source: &String) -> Result<String> {
         "heading" => parse_heading(node, children, source)?,
         "heading_stars" => parse_stars(node, children, source)?,
         "title" => parse_title(node, children, source)?,
-        "bold" | "italic" => parse_markup(node, children, source)?,
+        "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "superscript"
+        | "subscript" | "verbatim" | "inline_comment" | "math" | "inline_macro" => {
+            parse_markup(node, children, source)?
+        }
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
     };
@@ -108,6 +120,10 @@ fn main() -> Result<()> {
 
     println!("{}", tree.root_node().to_sexp());
     println!("{}", parse(&tree.root_node(), &content)?);
+
+    if cli.verify {
+        println!("AST verification is not implemented yet!");
+    }
 
     Ok(())
 }
