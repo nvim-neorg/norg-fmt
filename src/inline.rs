@@ -66,6 +66,7 @@ pub fn escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Re
 
 #[cfg(test)]
 mod tests {
+    use crate::Config;
     use tree_sitter::{Parser, Tree};
 
     use super::*;
@@ -107,7 +108,7 @@ mod tests {
             let tree = convert_to_tree(source);
             let root = tree.root_node();
 
-            let parsed = crate::parse(&root, &source.to_string()).unwrap();
+            let parsed = crate::parse(&root, &source.to_string(), &Config::default()).unwrap();
 
             assert_eq!(parsed, result);
         }

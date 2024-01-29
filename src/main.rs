@@ -13,6 +13,9 @@ struct NorgFmt {
 
     #[arg(long)]
     verify: bool,
+
+    #[arg(long)]
+    newline_after_headings: bool,
 }
 
 pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
@@ -23,21 +26,32 @@ pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) ->
         .fold(String::default(), |str, val| str + &val.content)
 }
 
-pub fn parse_heading(_node: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
+pub fn parse_heading(
+    _node: &Node,
+    children: Vec<NorgNode>,
+    _: &String,
+    config: &Config,
+) -> Result<String> {
     let stars = &children
         .get(0)
         .ok_or(eyre!("heading has no stars"))?
         .content;
 
     let heading_header = format!(
-        "{} {}",
+        "{} {}{}",
         stars,
         children
             .get(1)
             .ok_or(eyre!("heading has no title"))?
             .content,
+        if config.newline_after_headings {
+            "\n"
+        } else {
+            ""
+        }
     );
 
+    // TODO: Handle hard line breaks (`\\n`)
     let r = Regex::new(r"[\r\n]+")?;
 
     Ok(heading_header
@@ -62,12 +76,12 @@ pub struct NorgNode {
     pub content: String,
 }
 
-pub fn parse(node: &Node, source: &String) -> Result<String> {
+pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
     // println!("'{}'", node.kind());
     let mut children = vec![];
 
     for child in node.children(&mut node.walk()) {
-        let content = parse(&child, source)?;
+        let content = parse(&child, source, config)?;
 
         children.push(NorgNode {
             kind: child.kind().to_string(),
@@ -76,7 +90,7 @@ pub fn parse(node: &Node, source: &String) -> Result<String> {
     }
 
     let ret = match node.kind() {
-        "heading" => parse_heading(node, children, source)?,
+        "heading" => parse_heading(node, children, source, config)?,
         "heading_stars" => parse_stars(node, children, source)?,
         "title" => parse_title(node, children, source)?,
         "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "superscript"
@@ -91,8 +105,17 @@ pub fn parse(node: &Node, source: &String) -> Result<String> {
     Ok(ret)
 }
 
+#[derive(Default)]
+pub struct Config {
+    newline_after_headings: bool,
+}
+
 fn main() -> Result<()> {
     let cli = NorgFmt::parse();
+
+    let config = Config {
+        newline_after_headings: cli.newline_after_headings,
+    };
 
     let file = cli.file;
     let content = String::from_utf8(std::fs::read(file)?)?;
@@ -103,7 +126,7 @@ fn main() -> Result<()> {
     let tree = parser.parse(&content, None).unwrap();
 
     println!("{}", tree.root_node().to_sexp());
-    println!("{}", parse(&tree.root_node(), &content)?);
+    println!("{}", parse(&tree.root_node(), &content, &config)?);
 
     if cli.verify {
         println!("AST verification is not implemented yet!");
