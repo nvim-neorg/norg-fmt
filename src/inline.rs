@@ -51,16 +51,22 @@ pub fn markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
 }
 
 pub fn link_scope(_node: &Node, children: Vec<NorgNode>, _source: &String) -> Result<String> {
+    // NOTE(vhyrro): Please there has to be a better way of doing this.
+    let regex = Regex::new(r"\s+")?;
+
     let output = format!(
         "{} {}",
         children
             .get(0)
             .ok_or(eyre!("no scope provided for link"))?
             .content,
-        children
-            .get(1)
-            .ok_or(eyre!("no title provided for link"))?
-            .content
+        regex.replace_all(
+            &children
+                .get(1)
+                .ok_or(eyre!("no title provided for link"))?
+                .content,
+            " "
+        )
     );
 
     Ok(output.trim().to_string())
