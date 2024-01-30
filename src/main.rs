@@ -134,10 +134,7 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         "escape_sequence" => inline::escape_sequence(node, children, source)?,
         "uri" => inline::uri(node, children, source)?,
         "description" => inline::anchor(node, children, source)?,
-        "paragraph" => {
-            dbg!(inline::paragraph(node, children.clone(), source, config)?);
-            inline::paragraph(node, children, source, config)?
-        }
+        "paragraph" => inline::paragraph(node, children, source, config)?,
         kind if kind.starts_with("link_scope_") || kind.starts_with("link_target_") => {
             inline::link_scope(node, children, source)?
         }
