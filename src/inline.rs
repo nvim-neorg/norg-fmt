@@ -105,16 +105,16 @@ pub fn escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Re
 }
 
 pub fn paragraph(
-    node: &Node,
-    _children: Vec<NorgNode>,
-    source: &String,
+    _node: &Node,
+    children: Vec<NorgNode>,
+    _source: &str,
     config: &Config,
 ) -> Result<String> {
     let whitespace_regex = Regex::new(r"\s+")?;
     let mergables = ["{"];
 
     Ok(whitespace_regex
-        .split(node.utf8_text(source.as_bytes())?)
+        .split(&rest(&children, None, None))
         .map(String::from)
         .coalesce(|first, second| {
             if mergables
@@ -141,7 +141,7 @@ pub fn paragraph(
 
             lines
         })
-        .join("\n"))
+        .join("\n").trim().to_string())
 }
 
 #[cfg(test)]
