@@ -50,7 +50,7 @@ pub fn markup(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
     }
 }
 
-pub fn link_scope(_node: &Node, children: Vec<NorgNode>, _source: &String) -> Result<String> {
+pub fn link_scope(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
     // NOTE(vhyrro): Please there has to be a better way of doing this.
     let regex = Regex::new(r"\s+")?;
 
@@ -77,7 +77,7 @@ pub fn anchor(node: &Node, _children: Vec<NorgNode>, source: &String) -> Result<
     let regex = Regex::new(r"\s+")?;
 
     Ok(regex
-        .replace_all(&node.utf8_text(source.as_bytes())?.trim(), " ")
+        .replace_all(node.utf8_text(source.as_bytes())?.trim(), " ")
         .to_string())
 }
 
