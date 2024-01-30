@@ -170,7 +170,7 @@ fn main() -> Result<()> {
 
     let tree = parser.parse(&content, None).unwrap();
 
-    println!("{}", tree.root_node().to_sexp());
+    // println!("{}", tree.root_node().to_sexp());
     println!("{}", parse(&tree.root_node(), &content, &config)?);
 
     if cli.verify {
