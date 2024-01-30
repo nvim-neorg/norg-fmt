@@ -13,15 +13,19 @@ struct NorgFmt {
     /// The path of the file to format.
     file: PathBuf,
 
+    /// (todo) Verify the output of the AST after the formatting.
     #[arg(long)]
     verify: bool,
 
+    /// If true will add an extra newline after a heading title to separate the content.
     #[arg(long)]
     newline_after_headings: bool,
 
+    /// If true will not forcefully give heading titles zero indentation.
     #[arg(long)]
-    no_indent_headings: bool,
+    indent_headings: bool,
 
+    /// Determines the maximum length of a paragraph's line. Default: 80.
     #[arg(long)]
     line_length: Option<usize>,
 }
@@ -66,7 +70,7 @@ pub fn parse_heading(
     let children = children
         .into_iter()
         .map(|node| {
-            if config.no_indent_headings && node.kind == "heading" {
+            if !config.indent_headings && node.kind == "heading" {
                 node
             } else {
                 let matches = r.find_iter(&node.content).collect::<Vec<_>>();
@@ -145,7 +149,7 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
 #[derive(Default)]
 pub struct Config {
     newline_after_headings: bool,
-    no_indent_headings: bool,
+    indent_headings: bool,
     line_length: usize,
 }
 
@@ -154,7 +158,7 @@ fn main() -> Result<()> {
 
     let config = Config {
         newline_after_headings: cli.newline_after_headings,
-        no_indent_headings: cli.no_indent_headings,
+        indent_headings: cli.indent_headings,
         line_length: cli.line_length.unwrap_or(80),
     };
 
