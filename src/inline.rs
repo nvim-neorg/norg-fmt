@@ -193,4 +193,37 @@ mod tests {
             assert_eq!(parsed, result);
         }
     }
+
+    #[test]
+    fn links() {
+        let sources = vec![
+            "{*    long link}",
+            r"{*  long link with    space }",
+            r"[ unnecessary space ]",
+            r"[ unnecessary     extra	space ]",
+            r"{#   link with space}[ and a description]",
+            r"{/ file .txt}[ and a description]",
+            r"{@ Tue    5th May}[]",
+            r"{https://there should be no space here.com}",
+        ];
+        let results = vec![
+            r"{* long link}",
+            r"{* long link with space}",
+            r"[unnecessary space]",
+            r"[unnecessary extra space]",
+            r"{# link with space}[and a description]",
+            r"{/ file .txt}[and a description]",
+            r"{@ Tue 5th May}[]",
+            r"{https://thereshouldbenospacehere.com}",
+        ];
+
+        for (source, result) in sources.into_iter().zip(results) {
+            let tree = convert_to_tree(source);
+            let root = tree.root_node();
+
+            let parsed = crate::parse(&root, &source.to_string(), &Config::default()).unwrap();
+
+            assert_eq!(parsed, result);
+        }
+    }
 }
