@@ -27,9 +27,9 @@ dependencies = [
 
 [[package]]
 name = "anstyle"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7079075b41f533b8c61d2a4d073c4676e1f8b249ff94a393b0595db304e0dd87"
+checksum = "2faccea4cc4ab4a667ce676a30e8ec13922a692c99bb8f5b11f1502c72e04220"
 
 [[package]]
 name = "anstyle-parse"
@@ -279,7 +279,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-norg"
 version = "0.0.1"
-source = "git+https://github.com/boltlessengineer/tree-sitter-norg3-pr1?branch=beyond-paragraph#25e4ab2fc3de48cb7726572cee612a586aaebfb8"
+source = "git+https://github.com/boltlessengineer/tree-sitter-norg3-pr1?branch=beyond-paragraph#98fc812f1bd57d9517fce4d49802af07b99f7864"
 dependencies = [
  "cc",
  "tree-sitter",

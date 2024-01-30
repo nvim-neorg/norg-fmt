@@ -164,11 +164,20 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
     })
 }
 
-#[derive(Default)]
 pub struct Config {
     newline_after_headings: bool,
     indent_headings: bool,
     line_length: usize,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            newline_after_headings: false,
+            indent_headings: false,
+            line_length: 80,
+        }
+    }
 }
 
 fn main() -> Result<()> {
