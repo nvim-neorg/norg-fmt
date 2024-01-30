@@ -1,3 +1,5 @@
+// TODO: Add loads of tests
+
 use clap::Parser as ClapParser;
 use eyre::{eyre, Result};
 use regex::Regex;
@@ -19,6 +21,9 @@ struct NorgFmt {
 
     #[arg(long)]
     no_indent_headings: bool,
+
+    #[arg(long)]
+    line_length: Option<usize>,
 }
 
 pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) -> String {
@@ -125,6 +130,10 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         "escape_sequence" => inline::escape_sequence(node, children, source)?,
         "uri" => inline::uri(node, children, source)?,
         "description" => inline::anchor(node, children, source)?,
+        "paragraph" => {
+            dbg!(inline::paragraph(node, children.clone(), source, config)?);
+            inline::paragraph(node, children, source, config)?
+        }
         kind if kind.starts_with("link_scope_") || kind.starts_with("link_target_") => {
             inline::link_scope(node, children, source)?
         }
@@ -137,6 +146,7 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
 pub struct Config {
     newline_after_headings: bool,
     no_indent_headings: bool,
+    line_length: usize,
 }
 
 fn main() -> Result<()> {
@@ -145,6 +155,7 @@ fn main() -> Result<()> {
     let config = Config {
         newline_after_headings: cli.newline_after_headings,
         no_indent_headings: cli.no_indent_headings,
+        line_length: cli.line_length.unwrap_or(80),
     };
 
     let file = cli.file;

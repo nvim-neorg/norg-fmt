@@ -1,5 +1,6 @@
-use crate::{rest, NorgNode};
+use crate::{rest, Config, NorgNode};
 use eyre::{eyre, Result};
+use itertools::Itertools;
 use regex::{Captures, Regex};
 use tree_sitter::Node;
 
@@ -101,6 +102,46 @@ pub fn escape_sequence(node: &Node<'_>, _: Vec<NorgNode>, source: &String) -> Re
     } else {
         Ok(escaped_char.to_string())
     }
+}
+
+pub fn paragraph(
+    node: &Node,
+    _children: Vec<NorgNode>,
+    source: &String,
+    config: &Config,
+) -> Result<String> {
+    let whitespace_regex = Regex::new(r"\s+")?;
+    let mergables = ["{"];
+
+    Ok(whitespace_regex
+        .split(node.utf8_text(source.as_bytes())?)
+        .map(String::from)
+        .coalesce(|first, second| {
+            if mergables
+                .iter()
+                .any(|possibility| first.starts_with(possibility))
+            {
+                Ok(first.to_string() + " " + &second)
+            } else {
+                Err((first, second))
+            }
+        })
+        .fold::<Vec<String>, _>(vec![String::default()], |mut lines, word| {
+            let current_line = lines.last_mut().unwrap();
+            let new_len = word.len();
+
+            // This odd-looking less than operation is intentional, as we are also taking into
+            // account the space that will be inserted.
+            if current_line.len() + new_len < config.line_length {
+                current_line.push_str(&(" ".to_string() + &word));
+            } else {
+                *current_line = current_line.trim().to_string();
+                lines.push(word.to_string());
+            }
+
+            lines
+        })
+        .join("\n"))
 }
 
 #[cfg(test)]
