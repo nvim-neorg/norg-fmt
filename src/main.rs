@@ -32,7 +32,7 @@ pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) ->
 pub fn parse_heading(
     _node: &Node,
     children: Vec<NorgNode>,
-    _source: &String,
+    _source: &str,
     config: &Config,
 ) -> Result<String> {
     let stars = children
@@ -76,7 +76,7 @@ pub fn parse_heading(
                         .map(|(i, str)| {
                             " ".repeat(stars.len() + 1)
                                 + &str
-                                + matches.get(i).map(|m| m.as_str()).unwrap_or_default()
+                                + matches.get(i).map(|m| m.as_str()).unwrap_or("\n")
                         })
                         .collect::<String>(),
                 }
