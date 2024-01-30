@@ -12,4 +12,4 @@ itertools = "0.12.1"
 regex = "1.10.3"
 serde = { version = "1.0.196", features = ["derive"] }
 tree-sitter = "0.20.10"
-tree-sitter-norg = { git = "https://github.com/boltlessengineer/tree-sitter-norg3-pr1", branch = "beyond-paragraph" }
+tree-sitter-norg = { git = "https://github.com/boltlessengineer/tree-sitter-norg3-pr1", branch = "null_detached_modifier" }

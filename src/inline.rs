@@ -114,9 +114,9 @@ pub fn paragraph(
     let mergables = ["{"];
 
     Ok(whitespace_regex
-        .split(&rest(&children, None, None))
-        .map(String::from)
-        .coalesce(|first, second| {
+        .split(&rest(&children, None, Some(children.len() - 1)))
+        .map_into()
+        .coalesce(|first: String, second: String| {
             if mergables
                 .iter()
                 .any(|possibility| first.starts_with(possibility))
@@ -141,7 +141,7 @@ pub fn paragraph(
 
             lines
         })
-        .join("\n").trim().to_string())
+        .join("\n").trim().to_string() + &children.last().unwrap().content + "\n")
 }
 
 #[cfg(test)]
@@ -190,7 +190,7 @@ mod tests {
 
             let parsed = crate::parse(&root, &source.to_string(), &Config::default()).unwrap();
 
-            assert_eq!(parsed, result);
+            assert_eq!(parsed.trim(), result);
         }
     }
 
@@ -223,7 +223,32 @@ mod tests {
 
             let parsed = crate::parse(&root, &source.to_string(), &Config::default()).unwrap();
 
-            assert_eq!(parsed, result);
+            assert_eq!(parsed.trim(), result);
+        }
+    }
+
+    #[test]
+    fn paragraphs() {
+        let sources = vec![
+            "hello  world",
+            "  hello world ",
+            "hello\nworld",
+            "hello\n\nworld",
+        ];
+        let results = vec![
+            "hello world",
+            "hello world",
+            "hello world",
+            "hello\n\nworld",
+        ];
+
+        for (source, result) in sources.into_iter().zip(results) {
+            let tree = convert_to_tree(source);
+            let root = tree.root_node();
+
+            let parsed = crate::parse(&root, &source.to_string(), &Config::default()).unwrap();
+
+            assert_eq!(parsed.trim(), result);
         }
     }
 }

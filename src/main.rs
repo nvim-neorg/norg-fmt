@@ -105,24 +105,32 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
 }
 
 pub fn parse_nestable_modifier(
-    node: &Node,
+    _node: &Node,
     children: Vec<NorgNode>,
-    source: &str,
+    _source: &str,
 ) -> Result<String> {
     // Seriously find out how to remove all of these regexes please
     let regex = Regex::new(r"[\n\r]")?;
 
-    let depth = children
+    let prefix = &children
         .get(0)
         .ok_or(eyre!("nestable modifier has no prefix"))?
-        .content
-        .len();
+        .content;
 
-    Ok(regex
-        .split(node.utf8_text(source.as_bytes())?)
-        .skip(1)
-        .map(|str| " ".repeat(depth + 1) + str)
-        .collect())
+    let content = rest(&children, Some(1), None);
+
+    let mut split = regex.split(&content);
+
+    let first_line: String = split.nth(0).unwrap().to_string();
+
+    // FIXME: This only creates a single newline afterwards which is really bad as it will connect
+    // disjoint lists together.
+    Ok(prefix.to_owned()
+        + " "
+        + &first_line
+        + &split
+            .map(|str| " ".repeat(prefix.len() + 1) + str)
+            .collect::<String>())
 }
 
 #[derive(Debug, Clone)]
@@ -148,6 +156,9 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         "heading" => parse_heading(node, children, source, config)?,
         "heading_stars" => parse_stars(node, children, source)?,
         "title" => parse_title(node, children, source)?,
+        "unordered_list_item" | "ordered_list_item" | "quote_list_item" => {
+            parse_nestable_modifier(node, children, source)?
+        }
         "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "superscript"
         | "subscript" | "verbatim" | "inline_comment" | "math" | "inline_macro" => {
             inline::markup(node, children, source)?
@@ -161,7 +172,8 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         }
         _ if node.child_count() == 0 => node.utf8_text(source.as_bytes())?.to_string(),
         _ => rest(&children, None, None),
-    })
+    }
+    .to_string())
 }
 
 pub struct Config {
@@ -198,7 +210,7 @@ fn main() -> Result<()> {
     let tree = parser.parse(&content, None).unwrap();
 
     // println!("{}", tree.root_node().to_sexp());
-    println!("{}", parse(&tree.root_node(), &content, &config)?);
+    println!("{}", parse(&tree.root_node(), &content, &config)?.trim());
 
     if cli.verify {
         println!("AST verification is not implemented yet!");
