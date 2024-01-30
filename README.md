@@ -16,3 +16,15 @@ In the future we hope to provide a plethora of flags to tune the document to you
 - Removal of extraneous escape sequences
 - Automatic conversion of markup to free-form markup and vice versa if there
   are escape characters (e.g. `$Hello \\LaTeX!$` => `$|Hello \LaTeX!|$`)
+- Smart formatting of paragraphs to a specific line length while preserving proper link structures.
+
+# Usage
+
+```sh
+norg-fmt <file> <options>
+```
+
+Currently `norg-fmt` is capable of formatting one file at a time.
+
+Available options may be viewed by running `norg-fmt --help`. The formatter will print to stdout, so feel
+free to pipe the output anywhere you might need.
