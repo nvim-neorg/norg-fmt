@@ -104,6 +104,27 @@ pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<Str
     Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
 }
 
+pub fn parse_nestable_modifier(
+    node: &Node,
+    children: Vec<NorgNode>,
+    source: &str,
+) -> Result<String> {
+    // Seriously find out how to remove all of these regexes please
+    let regex = Regex::new(r"[\n\r]")?;
+
+    let depth = children
+        .get(0)
+        .ok_or(eyre!("nestable modifier has no prefix"))?
+        .content
+        .len();
+
+    Ok(regex
+        .split(node.utf8_text(source.as_bytes())?)
+        .skip(1)
+        .map(|str| " ".repeat(depth + 1) + str)
+        .collect())
+}
+
 #[derive(Debug, Clone)]
 pub struct NorgNode {
     // field: Option<String>,
