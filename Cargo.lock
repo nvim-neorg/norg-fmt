@@ -279,7 +279,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-norg"
 version = "0.0.1"
-source = "git+https://github.com/boltlessengineer/tree-sitter-norg3-pr1?branch=beyond-paragraph#98fc812f1bd57d9517fce4d49802af07b99f7864"
+source = "git+https://github.com/boltlessengineer/tree-sitter-norg3-pr1?branch=null_detached_modifier#c7299312c83ed2b8307c400a066f9f84fb3f2868"
 dependencies = [
  "cc",
  "tree-sitter",

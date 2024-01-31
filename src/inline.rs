@@ -141,7 +141,11 @@ pub fn paragraph(
 
             lines
         })
-        .join("\n").trim().to_string() + &children.last().unwrap().content + "\n")
+        .join("\n")
+        .trim()
+        .to_string()
+        + &children.last().unwrap().content
+        + "\n")
 }
 
 #[cfg(test)]

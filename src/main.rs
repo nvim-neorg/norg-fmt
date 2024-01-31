@@ -1,11 +1,9 @@
-// TODO: Add loads of tests
-
 use clap::Parser as ClapParser;
-use eyre::{eyre, Result};
-use regex::Regex;
+use eyre::Result;
 use std::path::PathBuf;
 use tree_sitter::{Node, Parser};
 
+mod block;
 mod inline;
 
 #[derive(ClapParser)]
@@ -38,101 +36,6 @@ pub fn rest(children: &Vec<NorgNode>, from: Option<usize>, to: Option<usize>) ->
         .fold(String::default(), |str, val| str + &val.content)
 }
 
-pub fn parse_heading(
-    _node: &Node,
-    children: Vec<NorgNode>,
-    _source: &str,
-    config: &Config,
-) -> Result<String> {
-    let stars = children
-        .get(0)
-        .ok_or(eyre!("heading has no stars"))?
-        .clone()
-        .content;
-
-    let heading_header = format!(
-        "{} {}{}",
-        stars,
-        children
-            .get(1)
-            .ok_or(eyre!("heading has no title"))?
-            .content,
-        if config.newline_after_headings {
-            "\n"
-        } else {
-            ""
-        }
-    );
-
-    // TODO: Handle hard line breaks (`\\n`)
-    let r = Regex::new(r"[\r\n]+")?;
-
-    let children = children
-        .into_iter()
-        .map(|node| {
-            if !config.indent_headings && node.kind == "heading" {
-                node
-            } else {
-                let matches = r.find_iter(&node.content).collect::<Vec<_>>();
-
-                NorgNode {
-                    kind: node.kind,
-                    content: r
-                        .split(&node.content)
-                        .enumerate()
-                        .filter(|(_, str)| !str.is_empty())
-                        .map(|(i, str)| (i, str.to_string()))
-                        .map(|(i, str)| {
-                            " ".repeat(stars.len() + 1)
-                                + &str
-                                + matches.get(i).map(|m| m.as_str()).unwrap_or("\n")
-                        })
-                        .collect::<String>(),
-                }
-            }
-        })
-        .collect();
-
-    Ok(heading_header + &rest(&children, Some(2), None))
-}
-
-pub fn parse_stars(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
-    Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
-}
-
-pub fn parse_title(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
-    Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
-}
-
-pub fn parse_nestable_modifier(
-    _node: &Node,
-    children: Vec<NorgNode>,
-    _source: &str,
-) -> Result<String> {
-    // Seriously find out how to remove all of these regexes please
-    let regex = Regex::new(r"[\n\r]")?;
-
-    let prefix = &children
-        .get(0)
-        .ok_or(eyre!("nestable modifier has no prefix"))?
-        .content;
-
-    let content = rest(&children, Some(1), None);
-
-    let mut split = regex.split(&content);
-
-    let first_line: String = split.nth(0).unwrap().to_string();
-
-    // FIXME: This only creates a single newline afterwards which is really bad as it will connect
-    // disjoint lists together.
-    Ok(prefix.to_owned()
-        + " "
-        + &first_line
-        + &split
-            .map(|str| " ".repeat(prefix.len() + 1) + str)
-            .collect::<String>())
-}
-
 #[derive(Debug, Clone)]
 pub struct NorgNode {
     // field: Option<String>,
@@ -153,11 +56,11 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
     }
 
     Ok(match node.kind() {
-        "heading" => parse_heading(node, children, source, config)?,
-        "heading_stars" => parse_stars(node, children, source)?,
-        "title" => parse_title(node, children, source)?,
+        "heading" => block::heading(node, children, source, config)?,
+        "heading_stars" => block::stars(node, children, source)?,
+        "inline" => block::title(node, children, source)?,
         "unordered_list_item" | "ordered_list_item" | "quote_list_item" => {
-            parse_nestable_modifier(node, children, source)?
+            block::nestable_modifier(node, children, source)?
         }
         "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "superscript"
         | "subscript" | "verbatim" | "inline_comment" | "math" | "inline_macro" => {
