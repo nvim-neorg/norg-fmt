@@ -150,7 +150,7 @@ pub fn ranged_tag(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Resul
     );
     let end = &children.last().unwrap().content;
 
-    Ok((head + " " + &parameters.join(" ")).trim_end().to_string() + "\n" + &content + end)
+    Ok((head + " " + &parameters.join(" ")).trim_end().to_string() + "\n" + &content + end + "\n")
 }
 
 pub fn carryover_tag(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
