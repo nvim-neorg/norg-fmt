@@ -59,6 +59,15 @@ pub fn parse(node: &Node, source: &String, config: &Config) -> Result<String> {
         "heading" => block::heading(node, children, source, config)?,
         "heading_stars" => block::stars(node, children, source)?,
         "inline" => block::title(node, children, source)?,
+        "verbatim_line" => {
+            let child = NorgNode {
+                kind: "verbatim_line".into(),
+                content: node.utf8_text(source.as_bytes())?.into(),
+            };
+
+            block::title(node, vec![child], source)?
+        }
+        "definition" | "table" | "footnote" => block::rangeable_modifier(node, children, source)?,
         "unordered_list_item" | "ordered_list_item" | "quote_list_item" => {
             block::nestable_modifier(node, children, source)?
         }

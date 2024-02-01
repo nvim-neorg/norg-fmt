@@ -86,7 +86,7 @@ pub fn nestable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -
     let mut split = rest.split_inclusive(['\n', '\r']);
     let first = split
         .next()
-        .ok_or(eyre!("no content within nestable modifier!"))?;
+        .ok_or(eyre!("no content within nestable modifier"))?;
     let to_indent = split
         .map(|str| {
             if str.trim().is_empty() {
@@ -98,6 +98,21 @@ pub fn nestable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -
         .collect::<String>();
 
     Ok(prefix.to_string() + " " + first + &to_indent)
+}
+
+pub fn rangeable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
+    let first = &children
+        .get(0)
+        .ok_or(eyre!("range-able detached modifier has no opening char"))?
+        .content;
+    let title = &children
+        .get(1)
+        .ok_or(eyre!("range-able detached modifier has no title"))?
+        .content;
+
+    let content = rest(&children, Some(2), None);
+
+    Ok(first.to_owned() + " " + title.trim() + &content)
 }
 
 #[cfg(test)]
