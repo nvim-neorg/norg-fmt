@@ -1,4 +1,4 @@
-# (WIP) Opinionated Formatter for Norg Files
+# Opinionated Formatter for Norg Files
 
 This project serves as a proof of concept formatter for Norg files using the latest V3 treesitter parsing engine.
 
@@ -12,6 +12,7 @@ In the future we hope to provide a plethora of flags to tune the document to you
 # Current Capabilities
 
 - Formatting of headings and proper indentation of children
+- Formatting of lists and quotes
 - Consistent formatting of links and anchors
 - Removal of extraneous escape sequences
 - Automatic conversion of markup to free-form markup and vice versa if there
