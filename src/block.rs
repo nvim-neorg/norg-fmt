@@ -101,7 +101,7 @@ pub fn nestable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -
 }
 
 pub fn rangeable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
-    let first = &children
+    let prefix = &children
         .get(0)
         .ok_or(eyre!("range-able detached modifier has no opening char"))?
         .content;
@@ -110,9 +110,30 @@ pub fn rangeable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) 
         .ok_or(eyre!("range-able detached modifier has no title"))?
         .content;
 
-    let content = rest(&children, Some(2), None);
+    let last_node = children
+        .last()
+        .ok_or(eyre!("range-able detached modifier has no opening char"))?;
 
-    Ok(first.to_owned() + " " + title.trim() + &content)
+    let has_closing_modifier = matches!(last_node.kind.as_str(), "^^" | "::" | "$$");
+
+    let content = rest(
+        &children,
+        Some(2),
+        if has_closing_modifier {
+            Some(children.len() - 1)
+        } else {
+            None
+        },
+    )
+    .split_inclusive(['\n', '\r'])
+    .map(|str| " ".repeat(prefix.len() + 1) + str)
+    .collect::<String>();
+
+    if has_closing_modifier {
+        Ok(prefix.to_owned() + " " + title.trim() + &content + &last_node.content)
+    } else {
+        Ok(prefix.to_owned() + " " + title.trim() + &content)
+    }
 }
 
 #[cfg(test)]
