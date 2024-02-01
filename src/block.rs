@@ -75,29 +75,31 @@ pub fn title(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
         .to_string())
 }
 
-pub fn nestable_modifier(
-    _node: &Node,
-    children: Vec<NorgNode>,
-    _source: &str,
-) -> Result<String> {
+pub fn nestable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
     // TODO(vhyrro): Find a way to improve this mess
 
     let prefix = &children
         .get(0)
         .ok_or(eyre!("nestable modifier has no prefix"))?
-        .content;
+        .content
+        .trim();
 
-    let content = rest(&children, Some(1), None);
+    let rest = rest(&children, Some(1), None);
+    let mut split = rest.split_inclusive(['\n', '\r']);
+    let first = split
+        .next()
+        .ok_or(eyre!("no content within nestable modifier!"))?;
+    let to_indent = split
+        .map(|str| {
+            if str.trim().is_empty() {
+                str.into()
+            } else {
+                " ".repeat(prefix.len() + 1) + str
+            }
+        })
+        .collect::<String>();
 
-    let (first_line, rest) = content.split_at(content.find('\n').unwrap());
-
-    let rest = if rest.trim().is_empty() {
-        rest.to_string()
-    } else {
-        rest.replacen('\n', &("\n".to_string() + &" ".repeat(prefix.len() + 1)), 1)
-    };
-
-    Ok(prefix.to_owned() + " " + first_line + &rest)
+    Ok(prefix.to_string() + " " + first + &to_indent)
 }
 
 #[cfg(test)]
@@ -167,13 +169,39 @@ mod tests {
             "- Text",
             "-  A    large amount of text that will surely surpass the eighty character limit if we try hard enough.",
             "- Text \n - Text",
-            "- Text\n\n- A different list"
+            "- Text\n\n- A different list",
+            "- A super duper large amount of text that will not only surely surpass the eighty character limit, but one that will extend beyond and span the distance of two lines instead.",
+
+            "~ Text",
+            "~  A    large amount of text that will surely surpass the eighty character limit if we try hard enough.",
+            "~ Text \n - Text",
+            "~ Text\n\n- A different list",
+            "~ A super duper large amount of text that will not only surely surpass the eighty character limit, but one that will extend beyond and span the distance of two lines instead.",
+
+            "> Text",
+            ">  A    large amount of text that will surely surpass the eighty character limit if we try hard enough.",
+            "> Text \n - Text",
+            "> Text\n\n- A different list",
+            "> A super duper large amount of text that will not only surely surpass the eighty character limit, but one that will extend beyond and span the distance of two lines instead.",
         ];
         let results = vec![
             "- Text",
             "- A large amount of text that will surely surpass the eighty character limit if\n  we try hard enough.",
             "- Text\n- Text",
             "- Text\n\n- A different list",
+            "- A super duper large amount of text that will not only surely surpass the eighty\n  character limit, but one that will extend beyond and span the distance of two\n  lines instead.",
+
+            "~ Text",
+            "~ A large amount of text that will surely surpass the eighty character limit if\n  we try hard enough.",
+            "~ Text\n- Text",
+            "~ Text\n\n- A different list",
+            "~ A super duper large amount of text that will not only surely surpass the eighty\n  character limit, but one that will extend beyond and span the distance of two\n  lines instead.",
+
+            "> Text",
+            "> A large amount of text that will surely surpass the eighty character limit if\n  we try hard enough.",
+            "> Text\n- Text",
+            "> Text\n\n- A different list",
+            "> A super duper large amount of text that will not only surely surpass the eighty\n  character limit, but one that will extend beyond and span the distance of two\n  lines instead.",
         ];
 
         for (source, result) in sources.into_iter().zip(results) {
