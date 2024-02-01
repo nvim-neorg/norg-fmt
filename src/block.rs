@@ -134,6 +134,37 @@ pub fn rangeable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) 
     }
 }
 
+pub fn ranged_tag(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
+    let head = rest(&children, None, Some(2));
+
+    let parameters = children
+        .iter()
+        .skip(2)
+        .take_while(|node| node.kind == "identifier")
+        .map(|node| node.content.clone())
+        .collect::<Vec<String>>();
+    let content = rest(
+        &children,
+        Some(2 + parameters.len()),
+        Some(children.len() - 1),
+    );
+    let end = &children.last().unwrap().content;
+
+    Ok((head + " " + &parameters.join(" ")).trim_end().to_string() + "\n" + &content + end)
+}
+
+pub fn carryover_tag(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
+    let head = rest(&children, None, Some(2));
+    let parameters = children
+        .into_iter()
+        .skip(2)
+        .map(|node| node.content)
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    Ok((head + " " + &parameters).trim_end().to_string() + "\n")
+}
+
 #[cfg(test)]
 mod tests {
     use tree_sitter::{Parser, Tree};
