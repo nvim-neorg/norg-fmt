@@ -74,8 +74,6 @@ pub fn title(_: &Node, children: Vec<NorgNode>, _: &str) -> Result<String> {
 }
 
 pub fn nestable_modifier(_node: &Node, children: Vec<NorgNode>, _source: &str) -> Result<String> {
-    // TODO(vhyrro): Find a way to improve this mess
-
     let prefix = &children
         .get(0)
         .ok_or(eyre!("nestable modifier has no prefix"))?
