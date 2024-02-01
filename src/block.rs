@@ -65,10 +65,8 @@ pub fn stars(node: &Node, _: Vec<NorgNode>, source: &String) -> Result<String> {
     Ok(node.utf8_text(source.as_bytes())?.trim().to_string())
 }
 
-pub fn title(_: &Node, children: Vec<NorgNode>, _: &String) -> Result<String> {
+pub fn title(_: &Node, children: Vec<NorgNode>, _: &str) -> Result<String> {
     let regex = Regex::new(r"[ \t\v]+")?;
-
-    dbg!(rest(&children, None, None));
 
     Ok(regex
         .replace_all(&rest(&children, None, None), " ")
